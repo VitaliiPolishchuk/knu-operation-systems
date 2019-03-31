@@ -93,7 +93,7 @@ int __cdecl main(void)
 
 		// No longer need server socket
 		closesocket(ListenSocket);
-
+		Sleep(5000);
 		// Receive until the peer shuts down the connection
 		do {
 

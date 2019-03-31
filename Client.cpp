@@ -7,6 +7,11 @@
 #include <stdio.h>
 #include <string>
 #include <iostream>
+#include <thread>
+#include <ctime>
+#include <future>
+#include <atomic>
+#include <chrono>
 
 
 // Need to link with Ws2_32.lib, Mswsock.lib, and Advapi32.lib
@@ -19,7 +24,8 @@
 #define DEFAULT_PORT_F "27014"
 #define DEFAULT_PORT_G "27015"
 
-void connectToServer1(PCSTR port_,int argc, char **argv, std::string message) {
+
+std::string connectToServer(PCSTR port_,int argc, char **argv, std::string message) {
 	WSADATA wsaData;
 	SOCKET ConnectSocket = INVALID_SOCKET;
 	struct addrinfo *result = NULL,
@@ -95,7 +101,6 @@ void connectToServer1(PCSTR port_,int argc, char **argv, std::string message) {
 		throw "send failed with error: %d\n", WSAGetLastError();
 	}
 
-	printf("Bytes Sent: %ld\n", iResult);
 
 	// shutdown the connection since no more data will be sent
 	iResult = shutdown(ConnectSocket, SD_SEND);
@@ -110,9 +115,11 @@ void connectToServer1(PCSTR port_,int argc, char **argv, std::string message) {
 
 		iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
 		if (iResult > 0) {
-			printf("Result is : ");
-			printf("%.*s\n", n, recvbuf);
 			
+			for (int i = 0; i < n; i++) {
+				message[i] = recvbuf[i];
+			}
+
 			do {
 				iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
 			} while (iResult > 0);
@@ -128,28 +135,93 @@ void connectToServer1(PCSTR port_,int argc, char **argv, std::string message) {
 	// cleanup
 	closesocket(ConnectSocket);
 	WSACleanup();
+
+	return message;
 }
 
 
 int __cdecl main(int argc, char **argv)
 {
+
+	std::string message;
+	std::getline(std::cin, message);
+
+	std::string resF, resG;
+
+	std::atomic<bool> doneF(false); // Use an atomic flag.
+	std::thread f([&doneF, argc, argv, &message, &resF] {
+		resF = connectToServer("27014", argc, argv, message);
+		doneF = true;
+	});
+
+	std::atomic<bool> doneG(false); // Use an atomic flag.
+	std::thread g([&doneG, argc, argv, &message, &resG] {
+		resG = connectToServer("27015", argc, argv, message);
+		doneG = true;
+	});
+
+	bool noAsk = false;
+	bool isStop = false;
 	while (true) {
-		std::string message;
 
-		std::getline(std::cin, message);
+		time_t start, end;
+		double elapsed;  // seconds
+		start = time(NULL);
+		int terminate = 1;
+		while (terminate) {
+			end = time(NULL);
+			elapsed = difftime(end, start);
 
-		try {
-			connectToServer1("27014", argc, argv, message);
-		}
-		catch (...) {
-			try {
-				connectToServer1("27015", argc, argv, message);
+			if (doneF) {
+				break;
 			}
-			catch (...) {
-				printf("Interaction with servers failed\n");
+			std::cout << elapsed << std::endl;
+			if (elapsed >= 2.0)
+				terminate = 0;
+		}
+		if (!doneF && doneG) {
+			std::cout << "we can get by 'g' function result\nStop it? " << std::endl;
+			std::string ans;
+			while (true) {
+				std::getline(std::cin, ans);
+				if (ans == "yes") {
+					isStop = true;
+					break;
+				}
+				else if (ans == "no") {
+					break;
+				}
+			}
+		}else if (!noAsk) {
+			std::cout << "Function do work more than 10 seconds. Try again?" << std::endl;
+			std::string ans;
+			while (true) {
+				std::getline(std::cin, ans);
+				std::cout << ans << std::endl;
+				if (ans == "yes") {
+					break;
+				}
+				else if (ans.compare("no") == 0) {
+					isStop = true;
+					break;
+				}
+				else if (ans == "noAsk") {
+					noAsk = true;
+					break;
+				}
 			}
 		}
+		else if (doneF || doneG) break;
+		if (isStop) break;
 	}
+	std::cout << "Stoping" << std::endl;
+	if (!isStop || doneG) {
+		if (doneF) std::cout << "ResF is:\t" << resF << std::endl;
+		else if (doneG) std::cout << "ResG is:\t" << resG << std::endl;
+	}
+	if(f.joinable()) f.join();
+	if(g.joinable()) g.join();
+	
 
 
 	return 0;

@@ -62,6 +62,7 @@ int __cdecl main(void)
 			return 1;
 		}
 
+
 		// Setup the TCP listening socket
 		iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
 		if (iResult == SOCKET_ERROR) {
@@ -93,7 +94,7 @@ int __cdecl main(void)
 
 		// No longer need server socket
 		closesocket(ListenSocket);
-
+		Sleep(15000);
 		// Receive until the peer shuts down the connection
 		do {
 

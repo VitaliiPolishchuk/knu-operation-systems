@@ -46,6 +46,11 @@
 //
 void FreeSocket(SOCKET s, int rc);
 
+int f() {
+	Sleep(13000);
+	return 0;
+}
+
 //
 // Function: Usage
 //
@@ -89,7 +94,7 @@ int __cdecl main(int argc, char **argv)
 		*results = NULL,
 		*addrptr = NULL;
 	SOCKADDR_STORAGE client;
-
+	int timeToSleep = 1000;
 	WSADATA       wsaData;
 	SOCKET       *server_sockets = NULL,
 		client_socket = INVALID_SOCKET;
@@ -369,10 +374,7 @@ int __cdecl main(int argc, char **argv)
 				printf("read %d bytes\n", bytesread);
 
 				pbuffer = buffer;
-				Sleep(1000);
-				for (int i = 0; i < bytesread; i++) {
-					pbuffer[i] = tolower(pbuffer[i]);
-				}
+				pbuffer[0] = f() + '0';
 
 				// Now wait for writeability to echo the data back
 				FD_ZERO(&readfds);

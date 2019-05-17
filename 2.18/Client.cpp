@@ -160,6 +160,9 @@ int __cdecl main(int argc, char **argv)
 		doneG = true;
 	});
 
+	bool isFalseF = false;
+	bool isFalseG = false;
+
 	bool noAsk = false;
 	bool isStop = false;
 	while (true) {
@@ -172,32 +175,39 @@ int __cdecl main(int argc, char **argv)
 			end = time(NULL);
 			elapsed = difftime(end, start);
 
-			if (doneF) {
+			if ((doneF && !isFalseF) || (doneG && !isFalseG)) {
 				break;
 			}
-			std::cout << elapsed << std::endl;
-			if (elapsed >= 2.0)
+			
+			if (elapsed >= 10.0)
 				terminate = 0;
 		}
-		if (!doneF && doneG) {
-			std::cout << "we can get by 'g' function result\nStop it? " << std::endl;
-			std::string ans;
-			while (true) {
-				std::getline(std::cin, ans);
-				if (ans == "yes") {
-					isStop = true;
-					break;
-				}
-				else if (ans == "no") {
-					break;
-				}
+		if (doneF && !isFalseF) {
+			int r = resF[0] - '0';
+			if (r) {
+				std::cout << "F function return true " << std::endl;
+				break;
+			} else {
+				std::cout << "F function return false " << std::endl;
+				isFalseF = true;
 			}
-		}else if (!noAsk) {
-			std::cout << "Function do work more than 10 seconds. Try again?" << std::endl;
+		}
+		else if (doneG && !isFalseG) {
+			int r = resG[0] - '0';
+			if (r) {
+				std::cout << "G function return true " << std::endl;
+				break;
+			}
+			else {
+				std::cout << "G function return false " << std::endl;
+				isFalseG = true;
+			}
+
+		} else if (!noAsk) {
+			std::cout << "Functions do work more than 10 seconds. Try again?" << std::endl;
 			std::string ans;
 			while (true) {
 				std::getline(std::cin, ans);
-				std::cout << ans << std::endl;
 				if (ans == "yes") {
 					break;
 				}
@@ -211,14 +221,24 @@ int __cdecl main(int argc, char **argv)
 				}
 			}
 		}
-		else if (doneF || doneG) break;
+
+		if ((doneG && isFalseG) && (doneF && isFalseF)) {
+			break;
+		}
+		
+		
 		if (isStop) break;
 	}
 	std::cout << "Stoping" << std::endl;
-	if (!isStop || doneG) {
-		if (doneF) std::cout << "ResF is:\t" << resF << std::endl;
-		else if (doneG) std::cout << "ResG is:\t" << resG << std::endl;
+	std::cout << "Final result is ";
+	if (isFalseF && isFalseG) {
+		std::cout << "False" << std::endl;
 	}
+	else {
+		std::cout << "True" << std::endl;
+	}
+
+
 	if(f.joinable()) f.join();
 	if(g.joinable()) g.join();
 	
